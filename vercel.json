@@ -1,6 +1,7 @@
 {
 "version": 2,
 "name": "reconcilex-dashboard",
+"outputDirectory": ".",
 "cleanUrls": true,
 "headers": [
 {
