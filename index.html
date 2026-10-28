@@ -436,576 +436,648 @@
         </footer>
 
     <!-- JavaScript Application Logic -->
-    <script>
-        let activeTabName = 'dashboard';
+   <script>
+    let activeTabName = 'dashboard';
 
-        // State & Initial Data Structures
-        const defaultData = {
-            dashboard: [
-                { metric: "Total Sales Revenue", tally: 4520000, erp: 4520000, variance: 0, pct: 0.00, status: "Match", remarks: "Fully reconciled across all daily registers." },
-                { metric: "Total Cases Sold (Btls/Boxes)", tally: 12500, erp: 12500, variance: 0, pct: 0.00, status: "Match", remarks: "Physical units count matches ERP dispatches." },
-                { metric: "Closing Stock (Cases)", tally: 3450, erp: 3200, variance: -250, pct: -7.25, status: "Mismatch", remarks: "Discrepancy in warehouse stock counting." }
-            ],
-            dailyEntries: [
-                { date: "2026-10-01", tallySales: 150000, erpSales: 150000, salesVar: 0, salesStatus: "Match", tallyCases: 400, erpCases: 400, casesVar: 0, casesStatus: "Match", tallyStock: 3500, erpStock: 3500, stockVar: 0, stockStatus: "Match", overallStatus: "Match", remarks: "Routine daily check", month: "October 2026" },
-                { date: "2026-10-02", tallySales: 180000, erpSales: 180000, salesVar: 0, salesStatus: "Match", tallyCases: 480, erpCases: 480, casesVar: 0, casesStatus: "Match", tallyStock: 3450, erpStock: 3200, stockVar: -250, stockStatus: "Mismatch", overallStatus: "Mismatch", remarks: "Stock entry lag in ERP warehouse ledger", month: "October 2026" },
-                { date: "2026-10-03", tallySales: 210000, erpSales: 210000, salesVar: 0, salesStatus: "Match", tallyCases: 550, erpCases: 550, casesVar: 0, casesStatus: "Match", tallyStock: 3200, erpStock: 3200, stockVar: 0, stockStatus: "Match", overallStatus: "Match", remarks: "Stock reconciled", month: "October 2026" }
-            ],
-            monthlySummary: [
-                { metric: "October Sales (₹)", tally: 4520000, erp: 4520000, variance: 0, pct: 0.00, status: "Match", entries: 31, note: "Verified against GST returns." },
-                { metric: "October Volume (Cases)", tally: 12500, erp: 12500, variance: 0, pct: 0.00, status: "Match", entries: 31, note: "Dispatch notes aligned." },
-                { metric: "Closing Inventory Balance", tally: 3450, erp: 3200, variance: -250, pct: -7.25, status: "Mismatch", entries: 31, note: "250 cases under investigation." }
-            ]
-        };
+    // State & Initial Data Structures
+    const defaultData = {
+        dashboard: [
+            { metric: "Total Sales Revenue", tally: 4520000, erp: 4520000, variance: 0, pct: 0.00, status: "Match", remarks: "Fully reconciled across all daily registers." },
+            { metric: "Total Cases Sold (Btls/Boxes)", tally: 12500, erp: 12500, variance: 0, pct: 0.00, status: "Match", remarks: "Physical units count matches ERP dispatches." },
+            { metric: "Closing Stock (Cases)", tally: 3450, erp: 3200, variance: -250, pct: -7.25, status: "Mismatch", remarks: "Discrepancy in warehouse stock counting." }
+        ],
+        dailyEntries: [
+            { date: "2026-10-01", tallySales: 150000, erpSales: 150000, salesVar: 0, salesStatus: "Match", tallyCases: 400, erpCases: 400, casesVar: 0, casesStatus: "Match", tallyStock: 3500, erpStock: 3500, stockVar: 0, stockStatus: "Match", overallStatus: "Match", remarks: "Routine daily check", month: "October 2026" },
+            { date: "2026-10-02", tallySales: 180000, erpSales: 180000, salesVar: 0, salesStatus: "Match", tallyCases: 480, erpCases: 480, casesVar: 0, casesStatus: "Match", tallyStock: 3450, erpStock: 3200, stockVar: -250, stockStatus: "Mismatch", overallStatus: "Mismatch", remarks: "Stock entry lag in ERP warehouse ledger", month: "October 2026" },
+            { date: "2026-10-03", tallySales: 210000, erpSales: 210000, salesVar: 0, salesStatus: "Match", tallyCases: 550, erpCases: 550, casesVar: 0, casesStatus: "Match", tallyStock: 3200, erpStock: 3200, stockVar: 0, stockStatus: "Match", overallStatus: "Match", remarks: "Stock reconciled", month: "October 2026" }
+        ],
+        monthlySummary: [
+            { metric: "October Sales (₹)", tally: 4520000, erp: 4520000, variance: 0, pct: 0.00, status: "Match", entries: 31, note: "Verified against GST returns." },
+            { metric: "October Volume (Cases)", tally: 12500, erp: 12500, variance: 0, pct: 0.00, status: "Match", entries: 31, note: "Dispatch notes aligned." },
+            { metric: "Closing Inventory Balance", tally: 3450, erp: 3200, variance: -250, pct: -7.25, status: "Mismatch", entries: 31, note: "250 cases under investigation." }
+        ]
+    };
 
-        // Deep copy default data to initialize reactive state
-        let appData = JSON.parse(JSON.stringify(defaultData));
+    // Deep copy default data to initialize reactive state
+    let appData = JSON.parse(JSON.stringify(defaultData));
 
-        // Global store for Chart.js instances to allow destruction on update
-        const chartInstances = {
-            comparison: null,
-            status: null,
-            monthly: null
-        };
+    // Global store for Chart.js instances to allow destruction on update
+    const chartInstances = {
+        comparison: null,
+        status: null,
+        monthly: null
+    };
 
-        // Switch Active Tab
-        function switchTab(tabName) {
-            activeTabName = tabName;
-            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+    // Initialize App
+    window.onload = function() {
+        setupDragAndDrop();
+        renderAllViews();
+    };
 
-            document.getElementById(`tab-${tabName}`).classList.remove('hidden');
-            document.getElementById(`tab-${tabName}-btn`).classList.add('active');
-        }
+    // Switch Active Tab
+    function switchTab(tabName) {
+        activeTabName = tabName;
+        document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+        document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
 
-        // Helper: Format Currency (INR)
-        function formatCurrency(val) {
-            if (val === null || val === undefined || isNaN(val)) return "₹0.00";
-            return "₹" + new Intl.NumberFormat('en-IN', { maximumFractionDigits: 2, minimumFractionDigits: 2 }).format(val);
-        }
+        document.getElementById(`tab-${tabName}`).classList.remove('hidden');
+        document.getElementById(`tab-${tabName}-btn`).classList.add('active');
+    }
 
-        // Helper: Format Numbers with commas
-        function formatNum(num) {
-            if (num === null || num === undefined || isNaN(num)) return "0";
-            return new Intl.NumberFormat('en-IN').format(num);
-        }
+    // Helper: Format Currency (INR)
+    function formatCurrency(val) {
+        if (val === null || val === undefined || isNaN(val)) return "₹0.00";
+        return "₹" + new Intl.NumberFormat('en-IN', { maximumFractionDigits: 2, minimumFractionDigits: 2 }).format(val);
+    }
 
-        // Helper: Format Status Badge CSS
-        function getBadgeClass(status) {
-            if (!status) return "badge-nodata";
-            const s = String(status).trim().toLowerCase();
-            if (s === 'match' || s === 'matched') return "badge-match";
-            if (s === 'mismatch' || s === 'differ') return "badge-mismatch";
-            if (s === 'pending' || s === 'variance') return "badge-pending";
-            return "badge-nodata";
-        }
+    // Helper: Format Numbers with commas
+    function formatNum(num) {
+        if (num === null || num === undefined || isNaN(num)) return "0";
+        return new Intl.NumberFormat('en-IN').format(num);
+    }
 
-        // Capture Crisp PNG Screenshot of Current Screen
-        async function captureCurrentTab() {
-            const body = document.body;
-            const captureHeader = document.getElementById('capture-brand-header');
-            const screenNameElem = document.getElementById('capture-screen-name');
-            const dateElem = document.getElementById('capture-date');
+    // Helper: Format Status Badge CSS
+    function getBadgeClass(status) {
+        if (!status) return "badge-nodata";
+        const s = String(status).trim().toLowerCase();
+        if (s === 'match' || s === 'matched') return "badge-match";
+        if (s === 'mismatch' || s === 'differ') return "badge-mismatch";
+        if (s === 'pending' || s === 'variance') return "badge-pending";
+        return "badge-nodata";
+    }
 
-            // Format date string
-            dateElem.textContent = new Date().toLocaleString();
-            screenNameElem.textContent = activeTabName + " view";
-
-            // Add capturing class to hide unwanted upload/interactive controls
-            body.classList.add('capturing-mode');
-            captureHeader.classList.remove('hidden');
-
-            try {
-                const targetArea = document.getElementById('capture-area');
-                const canvas = await html2canvas(targetArea, {
-                    scale: 2, // High resolution crisp image
-                    useCORS: true,
-                    backgroundColor: '#f8fafc',
-                    logging: false
-                });
-
-                // Trigger Download
-                const image = canvas.toDataURL("image/png");
-                const link = document.createElement('a');
-                link.download = `ReconcileX_${activeTabName}_${new Date().toISOString().slice(0, 10)}.png`;
-                link.href = image;
-                link.click();
-
-            } catch (err) {
-                console.error("Screenshot error:", err);
-                alert("Failed to capture screenshot. Please try again.");
-            } finally {
-                // Restore controls
-                body.classList.remove('capturing-mode');
-                captureHeader.classList.add('hidden');
+    // Helper: Format Excel serial date numbers or Date objects into clean strings
+    function formatDateValue(val) {
+        if (val === null || val === undefined || val === '') return 'N/A';
+        
+        if (typeof val === 'number') {
+            const dateObj = XLSX.SSF.parse_date_code(val);
+            if (dateObj) {
+                const yyyy = dateObj.y;
+                const mm = String(dateObj.m).padStart(2, '0');
+                const dd = String(dateObj.d).padStart(2, '0');
+                return `${yyyy}-${mm}-${dd}`;
             }
         }
+        
+        if (val instanceof Date) {
+            return val.toISOString().split('T')[0];
+        }
 
-        // Export All 3 Tabs as a Clean Multi-Page PDF Report
-        async function captureAllTabsReport() {
-            const { jsPDF } = window.jspdf;
-            const pdf = new jsPDF('p', 'mm', 'a4');
-            const body = document.body;
-            const captureHeader = document.getElementById('capture-brand-header');
-            const screenNameElem = document.getElementById('capture-screen-name');
-            const dateElem = document.getElementById('capture-date');
+        return String(val).trim();
+    }
 
-            const tabs = ['dashboard', 'daily', 'monthly'];
-            const originalTab = activeTabName;
+    // Capture Crisp PNG Screenshot of Current Screen
+    async function captureCurrentTab() {
+        const body = document.body;
+        const captureHeader = document.getElementById('capture-brand-header');
+        const screenNameElem = document.getElementById('capture-screen-name');
+        const dateElem = document.getElementById('capture-date');
 
-            body.classList.add('capturing-mode');
-            captureHeader.classList.remove('hidden');
-            dateElem.textContent = new Date().toLocaleString();
+        dateElem.textContent = new Date().toLocaleString();
+        screenNameElem.textContent = activeTabName + " view";
 
-            for (let i = 0; i < tabs.length; i++) {
-                const tab = tabs[i];
-                switchTab(tab);
-                screenNameElem.textContent = tab + " view";
+        body.classList.add('capturing-mode');
+        captureHeader.classList.remove('hidden');
 
-                // Allow DOM/Charts to render completely
-                await new Promise(resolve => setTimeout(resolve, 300));
+        try {
+            const targetArea = document.getElementById('capture-area');
+            const canvas = await html2canvas(targetArea, {
+                scale: 2,
+                useCORS: true,
+                backgroundColor: '#f8fafc',
+                logging: false
+            });
 
-                const targetArea = document.getElementById('capture-area');
-                const canvas = await html2canvas(targetArea, {
-                    scale: 2,
-                    useCORS: true,
-                    backgroundColor: '#f8fafc',
-                    logging: false
-                });
+            const image = canvas.toDataURL("image/png");
+            const link = document.createElement('a');
+            link.download = `ReconcileX_${activeTabName}_${new Date().toISOString().slice(0, 10)}.png`;
+            link.href = image;
+            link.click();
 
-                const imgData = canvas.toDataURL('image/png');
-                const imgWidth = 210; // A4 size width in mm
-                const pageHeight = 297;
-                const imgHeight = (canvas.height * imgWidth) / canvas.width;
-
-                if (i > 0) pdf.addPage();
-                pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, Math.min(imgHeight, pageHeight));
-            }
-
-            // Restore State
-            switchTab(originalTab);
+        } catch (err) {
+            console.error("Screenshot error:", err);
+            alert("Failed to capture screenshot. Please try again.");
+        } finally {
             body.classList.remove('capturing-mode');
             captureHeader.classList.add('hidden');
+        }
+    }
 
-            pdf.save(`ReconcileX_Complete_Report_${new Date().toISOString().slice(0, 10)}.pdf`);
+    // Export All 3 Tabs as a Clean Multi-Page PDF Report
+    async function captureAllTabsReport() {
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        const body = document.body;
+        const captureHeader = document.getElementById('capture-brand-header');
+        const screenNameElem = document.getElementById('capture-screen-name');
+        const dateElem = document.getElementById('capture-date');
+
+        const tabs = ['dashboard', 'daily', 'monthly'];
+        const originalTab = activeTabName;
+
+        body.classList.add('capturing-mode');
+        captureHeader.classList.remove('hidden');
+        dateElem.textContent = new Date().toLocaleString();
+
+        for (let i = 0; i < tabs.length; i++) {
+            const tab = tabs[i];
+            switchTab(tab);
+            screenNameElem.textContent = tab + " view";
+
+            await new Promise(resolve => setTimeout(resolve, 300));
+
+            const targetArea = document.getElementById('capture-area');
+            const canvas = await html2canvas(targetArea, {
+                scale: 2,
+                useCORS: true,
+                backgroundColor: '#f8fafc',
+                logging: false
+            });
+
+            const imgData = canvas.toDataURL('image/png');
+            const imgWidth = 210;
+            const pageHeight = 297;
+            const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+            if (i > 0) pdf.addPage();
+            pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, Math.min(imgHeight, pageHeight));
         }
 
-        // Helper: Format Numbers with commas
-        function formatNum(num) {
-            if (num === null || num === undefined || isNaN(num)) return "0";
-            return new Intl.NumberFormat('en-IN').format(num);
+        switchTab(originalTab);
+        body.classList.remove('capturing-mode');
+        captureHeader.classList.add('hidden');
+
+        pdf.save(`ReconcileX_Complete_Report_${new Date().toISOString().slice(0, 10)}.pdf`);
+    }
+
+    // Drag and Drop Setup
+    function setupDragAndDrop() {
+        const dropZone = document.getElementById('drop-zone');
+
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, preventDefaults, false);
+        });
+
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
         }
 
-        // Helper: Format Status Badge CSS
-        function getBadgeClass(status) {
-            if (!status) return "badge-nodata";
-            const s = String(status).trim().toLowerCase();
-            if (s === 'match' || s === 'matched') return "badge-match";
-            if (s === 'mismatch' || s === 'differ') return "badge-mismatch";
-            if (s === 'pending' || s === 'variance') return "badge-pending";
-            return "badge-nodata";
-        }
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropZone.addEventListener(eventName, () => dropZone.classList.add('border-sky-500', 'bg-sky-50'), false);
+        });
 
-        // Initialize App
-        window.onload = function() {
-            setupDragAndDrop();
-            renderAllViews();
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, () => dropZone.classList.remove('border-sky-500', 'bg-sky-50'), false);
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            if (files.length > 0) {
+                processExcelFile(files[0]);
+            }
+        });
+    }
+
+    // File Input Handler
+    function handleFileUpload(event) {
+        const file = event.target.files[0];
+        if (file) {
+            processExcelFile(file);
+        }
+    }
+
+    // Process uploaded Excel File using SheetJS
+    function processExcelFile(file) {
+        document.getElementById('upload-btn-text').textContent = "Processing " + file.name + "...";
+        document.getElementById('loaded-filename').textContent = file.name;
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+
+                const sheetNames = workbook.SheetNames;
+                let dashSheet = workbook.Sheets['Dashboard'] || workbook.Sheets[sheetNames[0]];
+                let dailySheet = workbook.Sheets['Daily Entry'] || workbook.Sheets[sheetNames[1] || sheetNames[0]];
+                let monthlySheet = workbook.Sheets['Monthly Summary'] || workbook.Sheets[sheetNames[2] || sheetNames[0]];
+
+                if (dashSheet) parseDashboardSheet(dashSheet);
+                if (dailySheet) parseDailySheet(dailySheet);
+                if (monthlySheet) parseMonthlySheet(monthlySheet);
+
+                renderAllViews();
+                document.getElementById('upload-btn-text').textContent = "File Loaded Successfully!";
+                setTimeout(() => {
+                    document.getElementById('upload-btn-text').textContent = "Upload New File";
+                }, 3000);
+
+            } catch (err) {
+                console.error(err);
+                alert("Error parsing Excel file. Please ensure it follows the recommended template.");
+                document.getElementById('upload-btn-text').textContent = "Choose File or Drag & Drop";
+            }
+        };
+        reader.readAsArrayBuffer(file);
+    }
+
+    // Sheet 1 Parser: Dashboard (Skips title rows and finds header row dynamically)
+function parseDashboardSheet(sheet) {
+    const rawData = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: null });
+    if (!rawData || rawData.length < 2) return;
+
+    let parsed = [];
+    let headerRowIdx = -1;
+
+    // Find the row where column headers actually start
+    for (let i = 0; i < rawData.length; i++) {
+        const row = rawData[i];
+        if (row && row[0] && String(row[0]).trim().toLowerCase() === 'metric') {
+            headerRowIdx = i;
+            break;
+        }
+    }
+
+    if (headerRowIdx === -1) return; // Fallback if header not found
+
+    const headers = rawData[headerRowIdx];
+    
+    for (let i = headerRowIdx + 1; i < rawData.length; i++) {
+        const row = rawData[i];
+        if (row && row[0] !== null && row[0] !== undefined && String(row[0]).trim() !== '') {
+            const tallyVal = parseFloat(row[1]);
+            const erpVal = parseFloat(row[2]);
+
+            if (isNaN(tallyVal) && isNaN(erpVal)) continue;
+
+            const tally = isNaN(tallyVal) ? 0 : tallyVal;
+            const erp = isNaN(erpVal) ? 0 : erpVal;
+
+            parsed.push({
+                metric: String(row[0]).trim(),
+                tally: tally,
+                erp: erp,
+                variance: parseFloat(row[3]) || (tally - erp),
+                pct: parseFloat(row[4]) || 0,
+                status: row[5] ? String(row[5]).trim() : 'Match',
+                remarks: row[6] ? String(row[6]).trim() : 'Reconciled'
+            });
+        }
+    }
+    if (parsed.length > 0) appData.dashboard = parsed;
+}
+
+// Sheet 2 Parser: Daily Entry (Finds header row dynamically, skipping report titles)
+function parseDailySheet(sheet) {
+    const rawData = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: null });
+    if (!rawData || rawData.length < 2) return;
+
+    let headerRowIdx = -1;
+    for (let i = 0; i < rawData.length; i++) {
+        const row = rawData[i];
+        if (row && row.some(cell => cell && String(cell).toLowerCase().includes('date'))) {
+            headerRowIdx = i;
+            break;
+        }
+    }
+
+    if (headerRowIdx === -1) return;
+
+    const headers = rawData[headerRowIdx].map(h => h ? String(h).trim() : '');
+    let parsed = [];
+
+    for (let i = headerRowIdx + 1; i < rawData.length; i++) {
+        const row = rawData[i];
+        if (!row || !row.some(cell => cell !== null && cell !== '')) continue;
+
+        // Map row array to header keys
+        let rowObj = {};
+        headers.forEach((h, idx) => {
+            if (h) rowObj[h] = row[idx];
+        });
+
+        const getValue = (...possibleKeys) => {
+            for (let key of possibleKeys) {
+                if (rowObj[key] !== undefined && rowObj[key] !== null) {
+                    return rowObj[key];
+                }
+            }
+            return null;
         };
 
-        // Switch Active Tab
-        function switchTab(tabName) {
-            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+        const rawDate = getValue('Date', 'DATE', 'date');
+        const formattedDate = formatDateValue(rawDate);
 
-            document.getElementById(`tab-${tabName}`).classList.remove('hidden');
-            document.getElementById(`tab-${tabName}-btn`).classList.add('active');
+        const tallySales = parseFloat(getValue('Tally Sales ₹', 'Tally Sales', 'Tally Sales (₹)'));
+        const erpSales = parseFloat(getValue('ERP Sales ₹', 'ERP Sales', 'ERP Sales (₹)'));
+        const tallyCases = parseFloat(getValue('Tally Cases', 'Tally Volume'));
+        const erpCases = parseFloat(getValue('ERP Cases', 'ERP Volume'));
+
+        const isDataEntered = !isNaN(tallySales) || !isNaN(erpSales) || !isNaN(tallyCases) || !isNaN(erpCases);
+        if (!isDataEntered || formattedDate === 'N/A') continue;
+
+        const safeTallySales = isNaN(tallySales) ? 0 : tallySales;
+        const safeErpSales = isNaN(erpSales) ? 0 : erpSales;
+        const safeTallyCases = isNaN(tallyCases) ? 0 : tallyCases;
+        const safeErpCases = isNaN(erpCases) ? 0 : erpCases;
+
+        const tallyStock = parseFloat(getValue('Tally Closing Stock -cases', 'Tally Closing Stock - Cases', 'Tally Stock')) || 0;
+        const erpStock = parseFloat(getValue('ERP Closing Stock - cases', 'ERP Closing Stock - Cases', 'ERP Stock')) || 0;
+
+        parsed.push({
+            date: formattedDate,
+            tallySales: safeTallySales,
+            erpSales: safeErpSales,
+            salesVar: parseFloat(getValue('Sales Variance ₹', 'Sales Variance')) || (safeTallySales - safeErpSales),
+            salesStatus: getValue('Sales Status') || 'Match',
+            tallyCases: safeTallyCases,
+            erpCases: safeErpCases,
+            casesVar: parseFloat(getValue('Cases Variance')) || (safeTallyCases - safeErpCases),
+            casesStatus: getValue('Cases Status') || 'Match',
+            tallyStock: tallyStock,
+            erpStock: erpStock,
+            stockVar: parseFloat(getValue('Stock Variance ₹', 'Stock Variance')) || (tallyStock - erpStock),
+            stockStatus: getValue('Stock Status') || 'Match',
+            overallStatus: getValue('Overall Status') || 'Match',
+            remarks: getValue('Remarks / Action', 'Remarks') || '',
+            month: getValue('Month') || 'Current Month'
+        });
+    }
+
+    if (parsed.length > 0) appData.dailyEntries = parsed;
+}
+
+// Sheet 3 Parser: Monthly Summary (Skips title rows and finds header row dynamically)
+function parseMonthlySheet(sheet) {
+    const rawData = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: null });
+    if (!rawData || rawData.length < 2) return;
+    let parsed = [];
+    let headerRowIdx = -1;
+    for (let i = 0; i < rawData.length; i++) {
+        const row = rawData[i];
+        if (row && row[0] && String(row[0]).trim().toLowerCase() === 'metric') {
+            headerRowIdx = i;
+            break;
         }
+    }
 
-        <!-- Drag and Drop Setup -->
-        function setupDragAndDrop() {
-            const dropZone = document.getElementById('drop-zone');
+    if (headerRowIdx === -1) return;
 
-            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-                dropZone.addEventListener(eventName, preventDefaults, false);
+    const headers = rawData[headerRowIdx];
+
+    for (let i = headerRowIdx + 1; i < rawData.length; i++) {
+        const row = rawData[i];
+        if (row && row[0] !== null && row[0] !== undefined && String(row[0]).trim() !== '') {
+            const tally = parseFloat(row[1]) || 0;
+            const erp = parseFloat(row[2]) || 0;
+
+            if (isNaN(tally) && isNaN(erp)) continue;
+
+            parsed.push({
+                metric: String(row[0]).trim(),
+                tally: tally,
+                erp: erp,
+                variance: parseFloat(row[3]) || (tally - erp),
+                pct: parseFloat(row[4]) || 0,
+                status: row[5] ? String(row[5]).trim() : 'Match',
+                entries: parseInt(row[6]) || 0,
+                note: row[7] ? String(row[7]).trim() : ''
             });
+        }
+    }
+    if (parsed.length > 0) appData.monthlySummary = parsed;
+}
+    // Reset Data
+    function resetFilters() {
+        appData = JSON.parse(JSON.stringify(defaultData));
+        document.getElementById('loaded-filename').textContent = "Default Demo Data";
+        renderAllViews();
+    }
 
-            function preventDefaults(e) {
-                e.preventDefault();
-                e.stopPropagation();
+    // Render All Views
+    function renderAllViews() {
+        renderDashboardTab();
+        populateMonthFilters();
+        renderDailyTab();
+        renderMonthlyView();
+    }
+
+    // Render Tab 1: Dashboard View
+    function renderDashboardTab() {
+        const dash = appData.dashboard;
+
+        const salesItem = dash.find(i => i.metric.toLowerCase().includes('sales')) || dash[0] || {};
+        document.getElementById('dash-sales-tally').textContent = formatCurrency(salesItem.tally);
+        document.getElementById('dash-sales-erp').textContent = formatCurrency(salesItem.erp);
+        document.getElementById('dash-sales-var').textContent = formatCurrency(salesItem.variance);
+        document.getElementById('dash-sales-var-pct').textContent = (salesItem.pct || 0).toFixed(2) + '%';
+        document.getElementById('badge-sales-status').textContent = salesItem.status || 'Match';
+        document.getElementById('badge-sales-status').className = `px-2.5 py-1 text-xs font-semibold rounded-full ${getBadgeClass(salesItem.status)}`;
+
+        const casesItem = dash.find(i => i.metric.toLowerCase().includes('cases')) || dash[1] || {};
+        document.getElementById('dash-cases-tally').textContent = formatNum(casesItem.tally) + " Nos";
+        document.getElementById('dash-cases-erp').textContent = formatNum(casesItem.erp) + " Nos";
+        document.getElementById('dash-cases-var').textContent = formatNum(casesItem.variance) + " Nos";
+        document.getElementById('dash-cases-var-pct').textContent = (casesItem.pct || 0).toFixed(2) + '%';
+        document.getElementById('badge-cases-status').textContent = casesItem.status || 'Match';
+        document.getElementById('badge-cases-status').className = `px-2.5 py-1 text-xs font-semibold rounded-full ${getBadgeClass(casesItem.status)}`;
+
+        const stockItem = dash.find(i => i.metric.toLowerCase().includes('stock')) || dash[2] || {};
+        document.getElementById('dash-stock-tally').textContent = formatNum(stockItem.tally) + " Cases";
+        document.getElementById('dash-stock-erp').textContent = formatNum(stockItem.erp) + " Cases";
+        document.getElementById('dash-stock-var').textContent = formatNum(stockItem.variance) + " Cases";
+        document.getElementById('dash-stock-var-pct').textContent = (stockItem.pct || 0).toFixed(2) + '%';
+        document.getElementById('badge-stock-status').textContent = stockItem.status || 'Mismatch';
+        document.getElementById('badge-stock-status').className = `px-2.5 py-1 text-xs font-semibold rounded-full ${getBadgeClass(stockItem.status)}`;
+
+        const tbody = document.getElementById('dashboard-table-body');
+        tbody.innerHTML = dash.map(row => `
+            <tr class="hover:bg-slate-50 transition">
+                <td class="p-3 font-semibold text-slate-800">${row.metric}</td>
+                <td class="p-3 text-right text-slate-700">${formatNum(row.tally)}</td>
+                <td class="p-3 text-right text-slate-700">${formatNum(row.erp)}</td>
+                <td class="p-3 text-right font-semibold ${row.variance < 0 ? 'text-rose-600' : 'text-slate-800'}">${formatNum(row.variance)}</td>
+                <td class="p-3 text-right font-semibold ${row.pct < 0 ? 'text-rose-600' : 'text-slate-800'}">${(row.pct || 0).toFixed(2)}%</td>
+                <td class="p-3 text-center">
+                    <span class="px-2 py-0.5 text-xs rounded-full font-semibold ${getBadgeClass(row.status)}">${row.status}</span>
+                </td>
+                <td class="p-3 text-slate-500 max-w-xs truncate">${row.remarks}</td>
+            </tr>
+        `).join('');
+
+        renderDashboardCharts();
+    }
+
+    // Render Dashboard Bar & Doughnut Charts
+    function renderDashboardCharts() {
+        const ctx1 = document.getElementById('comparisonChart').getContext('2d');
+        if (chartInstances.comparison) chartInstances.comparison.destroy();
+
+        const labels = appData.dashboard.map(d => d.metric);
+        const tallyData = appData.dashboard.map(d => d.tally);
+        const erpData = appData.dashboard.map(d => d.erp);
+
+        chartInstances.comparison = new Chart(ctx1, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [
+                    { label: 'Tally Total', data: tallyData, backgroundColor: '#0284c7', borderRadius: 6 },
+                    { label: 'ERP Total', data: erpData, backgroundColor: '#10b981', borderRadius: 6 }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { position: 'top' } },
+                scales: { y: { beginAtZero: true, grid: { color: '#f1f5f9' } }, x: { grid: { display: false } } }
             }
+        });
 
-            ['dragenter', 'dragover'].forEach(eventName => {
-                dropZone.addEventListener(eventName, () => dropZone.classList.add('border-sky-500', 'bg-sky-50'), false);
-            });
+        const ctx2 = document.getElementById('statusDoughnutChart').getContext('2d');
+        if (chartInstances.status) chartInstances.status.destroy();
 
-            ['dragleave', 'drop'].forEach(eventName => {
-                dropZone.addEventListener(eventName, () => dropZone.classList.remove('border-sky-500', 'bg-sky-50'), false);
-            });
+        const statusCounts = appData.dailyEntries.reduce((acc, row) => {
+            const s = row.overallStatus || 'Match';
+            acc[s] = (acc[s] || 0) + 1;
+            return acc;
+        }, {});
 
-            dropZone.addEventListener('drop', (e) => {
-                const dt = e.dataTransfer;
-                const files = dt.files;
-                if (files.length > 0) {
-                    processExcelFile(files[0]);
-                }
-            });
-        }
-
-        // File Input Handler
-        function handleFileUpload(event) {
-            const file = event.target.files[0];
-            if (file) {
-                processExcelFile(file);
+        chartInstances.status = new Chart(ctx2, {
+            type: 'doughnut',
+            data: {
+                labels: Object.keys(statusCounts),
+                datasets: [{
+                    data: Object.values(statusCounts),
+                    backgroundColor: ['#22c55e', '#ef4444', '#f59e0b', '#94a3b8'],
+                    borderWidth: 2,
+                    borderColor: '#ffffff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { position: 'bottom' } },
+                cutout: '70%'
             }
+        });
+    }
+
+    // Populate Month Filters
+    function populateMonthFilters() {
+        const months = [...new Set(appData.dailyEntries.map(e => e.month).filter(Boolean))];
+        
+        const dailySelect = document.getElementById('daily-month-filter');
+        dailySelect.innerHTML = '<option value="ALL">All Months</option>' + 
+            months.map(m => `<option value="${m}">${m}</option>`).join('');
+
+        const monthlySelect = document.getElementById('monthly-select');
+        monthlySelect.innerHTML = months.map(m => `<option value="${m}">${m}</option>`).join('');
+        if (months.length === 0) {
+            monthlySelect.innerHTML = '<option value="ALL">All Months Summary</option>';
         }
+    }
 
-        // Process uploaded Excel File using SheetJS
-        function processExcelFile(file) {
-            document.getElementById('upload-btn-text').textContent = "Processing " + file.name + "...";
-            document.getElementById('loaded-filename').textContent = file.name;
+    // Render Tab 2: Daily Entry Register
+    function renderDailyTab() {
+        applyDailyFilters();
+    }
 
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                try {
-                    const data = new Uint8Array(e.target.result);
-                    const workbook = XLSX.read(data, { type: 'array' });
+    // Apply Filters for Daily Table
+    function applyDailyFilters() {
+        const search = document.getElementById('daily-search').value.toLowerCase();
+        const statusFilter = document.getElementById('daily-status-filter').value;
+        const monthFilter = document.getElementById('daily-month-filter').value;
 
-                    // Parse Sheets dynamically or search for matching names
-                    const sheetNames = workbook.SheetNames;
-                    let dashSheet = workbook.Sheets['Dashboard'] || workbook.Sheets[sheetNames[0]];
-                    let dailySheet = workbook.Sheets['Daily Entry'] || workbook.Sheets[sheetNames[1] || sheetNames[0]];
-                    let monthlySheet = workbook.Sheets['Monthly Summary'] || workbook.Sheets[sheetNames[2] || sheetNames[0]];
+        const filtered = appData.dailyEntries.filter(row => {
+            const matchesSearch = String(row.date).toLowerCase().includes(search) || 
+                                  String(row.remarks).toLowerCase().includes(search);
+            const matchesStatus = statusFilter === 'ALL' || (row.overallStatus && row.overallStatus.toLowerCase() === statusFilter.toLowerCase());
+            const matchesMonth = monthFilter === 'ALL' || row.month === monthFilter;
 
-                    if (dashSheet) parseDashboardSheet(dashSheet);
-                    if (dailySheet) parseDailySheet(dailySheet);
-                    if (monthlySheet) parseMonthlySheet(monthlySheet);
+            return matchesSearch && matchesStatus && matchesMonth;
+        });
 
-                    renderAllViews();
-                    document.getElementById('upload-btn-text').textContent = "File Loaded Successfully!";
-                    setTimeout(() => {
-                        document.getElementById('upload-btn-text').textContent = "Upload New File";
-                    }, 3000);
+        document.getElementById('daily-count').textContent = filtered.length;
 
-                } catch (err) {
-                    console.error(err);
-                    alert("Error parsing Excel file. Please ensure it follows the recommended template.");
-                    document.getElementById('upload-btn-text').textContent = "Choose File or Drag & Drop";
-                }
-            };
-            reader.readAsArrayBuffer(file);
-        }
+        const tbody = document.getElementById('daily-table-body');
+        tbody.innerHTML = filtered.map(row => `
+            <tr class="hover:bg-slate-50 transition border-b border-slate-100">
+                <td class="p-3 font-semibold text-slate-900 sticky left-0 bg-white">${row.date}</td>
+                <td class="p-3 text-right">${formatCurrency(row.tallySales)}</td>
+                <td class="p-3 text-right">${formatCurrency(row.erpSales)}</td>
+                <td class="p-3 text-right font-semibold ${row.salesVar < 0 ? 'text-rose-600' : 'text-slate-700'}">${formatCurrency(row.salesVar)}</td>
+                <td class="p-3 text-center"><span class="px-2 py-0.5 text-[10px] font-semibold rounded-full ${getBadgeClass(row.salesStatus)}">${row.salesStatus}</span></td>
+                <td class="p-3 text-right">${formatNum(row.tallyCases)}</td>
+                <td class="p-3 text-right">${formatNum(row.erpCases)}</td>
+                <td class="p-3 text-right font-semibold ${row.casesVar < 0 ? 'text-rose-600' : 'text-slate-700'}">${formatNum(row.casesVar)}</td>
+                <td class="p-3 text-center"><span class="px-2 py-0.5 text-[10px] font-semibold rounded-full ${getBadgeClass(row.casesStatus)}">${row.casesStatus}</span></td>
+                <td class="p-3 text-right">${formatNum(row.tallyStock)}</td>
+                <td class="p-3 text-right">${formatNum(row.erpStock)}</td>
+                <td class="p-3 text-right font-semibold ${row.stockVar < 0 ? 'text-rose-600' : 'text-slate-700'}">${formatNum(row.stockVar)}</td>
+                <td class="p-3 text-center"><span class="px-2 py-0.5 text-[10px] font-semibold rounded-full ${getBadgeClass(row.stockStatus)}">${row.stockStatus}</span></td>
+                <td class="p-3 text-center"><span class="px-2 py-0.5 text-[10px] font-semibold rounded-full ${getBadgeClass(row.overallStatus)}">${row.overallStatus}</span></td>
+                <td class="p-3 text-slate-500 truncate max-w-[180px]" title="${row.remarks}">${row.remarks}</td>
+            </tr>
+        `).join('');
+    }
 
-        // Sheet 1 Parser: Dashboard
-        function parseDashboardSheet(sheet) {
-            const rawData = XLSX.utils.sheet_to_json(sheet, { header: 1 });
-            if (!rawData || rawData.length < 2) return;
+    // Render Tab 3: Monthly View
+    function renderMonthlyView() {
+        const summary = appData.monthlySummary;
+        const tbody = document.getElementById('monthly-table-body');
 
-            let parsed = [];
-            // Skip headers, find row items
-            for (let i = 1; i < rawData.length; i++) {
-                const row = rawData[i];
-                if (row && row[0]) {
-                    parsed.push({
-                        metric: String(row[0] || ''),
-                        tally: parseFloat(row[1]) || 0,
-                        erp: parseFloat(row[2]) || 0,
-                        variance: parseFloat(row[3]) || (parseFloat(row[1]) - parseFloat(row[2])) || 0,
-                        pct: parseFloat(row[4]) || 0,
-                        status: String(row[5] || 'Match'),
-                        remarks: String(row[6] || 'Reconciled')
-                    });
+        tbody.innerHTML = summary.map(row => `
+            <tr class="hover:bg-slate-50 transition">
+                <td class="p-3 font-semibold text-slate-800">${row.metric}</td>
+                <td class="p-3 text-right text-slate-700">${formatNum(row.tally)}</td>
+                <td class="p-3 text-right text-slate-700">${formatNum(row.erp)}</td>
+                <td class="p-3 text-right font-semibold ${row.variance < 0 ? 'text-rose-600' : 'text-slate-800'}">${formatNum(row.variance)}</td>
+                <td class="p-3 text-right font-semibold ${row.pct < 0 ? 'text-rose-600' : 'text-slate-800'}">${(row.pct || 0).toFixed(2)}%</td>
+                <td class="p-3 text-center">
+                    <span class="px-2.5 py-0.5 text-xs rounded-full font-semibold ${getBadgeClass(row.status)}">${row.status}</span>
+                </td>
+                <td class="p-3 text-center text-slate-600">${row.entries || '-'}</td>
+                <td class="p-3 text-slate-500">${row.note}</td>
+            </tr>
+        `).join('');
+
+        renderMonthlyChart();
+    }
+
+    // Render Monthly Trend / Variance Chart
+    function renderMonthlyChart() {
+        const ctx = document.getElementById('monthlyChart').getContext('2d');
+        if (chartInstances.monthly) chartInstances.monthly.destroy();
+
+        const labels = appData.monthlySummary.map(m => m.metric);
+        const variances = appData.monthlySummary.map(m => m.variance);
+
+        chartInstances.monthly = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Variance Value',
+                    data: variances,
+                    backgroundColor: variances.map(v => v < 0 ? '#ef4444' : '#22c55e'),
+                    borderRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { grid: { color: '#f1f5f9' } },
+                    x: { grid: { display: false } }
                 }
             }
-            if (parsed.length > 0) appData.dashboard = parsed;
-        }
-
-        // Sheet 2 Parser: Daily Entry
-        function parseDailySheet(sheet) {
-            const rawData = XLSX.utils.sheet_to_json(sheet);
-            if (!rawData || rawData.length === 0) return;
-
-            let parsed = rawData.map(row => {
-                // Flexible keys fallback
-                const keys = Object.keys(row);
-                return {
-                    date: row['Date'] || row[keys[0]] || 'N/A',
-                    tallySales: parseFloat(row['Tally Sales ₹'] || row['Tally Sales'] || row[keys[1]]) || 0,
-                    erpSales: parseFloat(row['ERP Sales ₹'] || row['ERP Sales'] || row[keys[2]]) || 0,
-                    salesVar: parseFloat(row['Sales Variance ₹'] || row[keys[3]]) || 0,
-                    salesStatus: row['Sales Status'] || row[keys[4]] || 'Match',
-                    tallyCases: parseFloat(row['Tally Cases'] || row[keys[5]]) || 0,
-                    erpCases: parseFloat(row['ERP Cases'] || row[keys[6]]) || 0,
-                    casesVar: parseFloat(row['Cases Variance'] || row[keys[7]]) || 0,
-                    casesStatus: row['Cases Status'] || row[keys[8]] || 'Match',
-                    tallyStock: parseFloat(row['Tally Closing Stock - Cases'] || row['Tally Stock'] || row[keys[9]]) || 0,
-                    erpStock: parseFloat(row['ERP Closing Stock - Cases'] || row['ERP Stock'] || row[keys[10]]) || 0,
-                    stockVar: parseFloat(row['Stock Variance ₹'] || row['Stock Variance'] || row[keys[11]]) || 0,
-                    stockStatus: row['Stock Status'] || row[keys[12]] || 'Match',
-                    overallStatus: row['Overall Status'] || row[keys[13]] || 'Match',
-                    remarks: row['Remarks / Action'] || row['Remarks'] || row[keys[14]] || '',
-                    month: row['Month'] || row[keys[15]] || 'Current Month'
-                };
-            });
-
-            if (parsed.length > 0) appData.dailyEntries = parsed;
-        }
-
-        // Sheet 3 Parser: Monthly Summary
-        function parseMonthlySheet(sheet) {
-            const rawData = XLSX.utils.sheet_to_json(sheet);
-            if (!rawData || rawData.length === 0) return;
-
-            let parsed = rawData.map(row => {
-                const keys = Object.keys(row);
-                return {
-                    metric: row['Metric'] || row['Metric Category'] || row[keys[0]] || '',
-                    tally: parseFloat(row['Tally'] || row[keys[1]]) || 0,
-                    erp: parseFloat(row['ERP'] || row[keys[2]]) || 0,
-                    variance: parseFloat(row['Variance'] || row[keys[3]]) || 0,
-                    pct: parseFloat(row['Variance %'] || row[keys[4]]) || 0,
-                    status: row['Status'] || row[keys[5]] || 'Match',
-                    entries: parseInt(row['Entries'] || row[keys[6]]) || 0,
-                    note: row['Note'] || row['Audit Note'] || row[keys[7]] || ''
-                };
-            });
-
-            if (parsed.length > 0) appData.monthlySummary = parsed;
-        }
-
-        // Reset Data
-        function resetFilters() {
-            appData = JSON.parse(JSON.stringify(defaultData));
-            document.getElementById('loaded-filename').textContent = "Default Demo Data";
-            renderAllViews();
-        }
-
-        // Render All Views
-        function renderAllViews() {
-            renderDashboardTab();
-            populateMonthFilters();
-            renderDailyTab();
-            renderMonthlyView();
-        }
-
-        // Render Tab 1: Dashboard View
-        function renderDashboardTab() {
-            const dash = appData.dashboard;
-
-            // KPI 1: Sales (index 0 or metric search)
-            const salesItem = dash.find(i => i.metric.toLowerCase().includes('sales')) || dash[0] || {};
-            document.getElementById('dash-sales-tally').textContent = formatCurrency(salesItem.tally);
-            document.getElementById('dash-sales-erp').textContent = formatCurrency(salesItem.erp);
-            document.getElementById('dash-sales-var').textContent = formatCurrency(salesItem.variance);
-            document.getElementById('dash-sales-var-pct').textContent = (salesItem.pct || 0).toFixed(2) + '%';
-            document.getElementById('badge-sales-status').textContent = salesItem.status || 'Match';
-            document.getElementById('badge-sales-status').className = `px-2.5 py-1 text-xs font-semibold rounded-full ${getBadgeClass(salesItem.status)}`;
-
-            // KPI 2: Cases (index 1 or metric search)
-            const casesItem = dash.find(i => i.metric.toLowerCase().includes('cases')) || dash[1] || {};
-            document.getElementById('dash-cases-tally').textContent = formatNum(casesItem.tally) + " Nos";
-            document.getElementById('dash-cases-erp').textContent = formatNum(casesItem.erp) + " Nos";
-            document.getElementById('dash-cases-var').textContent = formatNum(casesItem.variance) + " Nos";
-            document.getElementById('dash-cases-var-pct').textContent = (casesItem.pct || 0).toFixed(2) + '%';
-            document.getElementById('badge-cases-status').textContent = casesItem.status || 'Match';
-            document.getElementById('badge-cases-status').className = `px-2.5 py-1 text-xs font-semibold rounded-full ${getBadgeClass(casesItem.status)}`;
-
-            // KPI 3: Stock (index 2 or metric search)
-            const stockItem = dash.find(i => i.metric.toLowerCase().includes('stock')) || dash[2] || {};
-            document.getElementById('dash-stock-tally').textContent = formatNum(stockItem.tally) + " Cases";
-            document.getElementById('dash-stock-erp').textContent = formatNum(stockItem.erp) + " Cases";
-            document.getElementById('dash-stock-var').textContent = formatNum(stockItem.variance) + " Cases";
-            document.getElementById('dash-stock-var-pct').textContent = (stockItem.pct || 0).toFixed(2) + '%';
-            document.getElementById('badge-stock-status').textContent = stockItem.status || 'Mismatch';
-            document.getElementById('badge-stock-status').className = `px-2.5 py-1 text-xs font-semibold rounded-full ${getBadgeClass(stockItem.status)}`;
-
-            // Render Table (Sheet 1)
-            const tbody = document.getElementById('dashboard-table-body');
-            tbody.innerHTML = dash.map(row => `
-                <tr class="hover:bg-slate-50 transition">
-                    <td class="p-3 font-semibold text-slate-800">${row.metric}</td>
-                    <td class="p-3 text-right text-slate-700">${formatNum(row.tally)}</td>
-                    <td class="p-3 text-right text-slate-700">${formatNum(row.erp)}</td>
-                    <td class="p-3 text-right font-semibold ${row.variance < 0 ? 'text-rose-600' : 'text-slate-800'}">${formatNum(row.variance)}</td>
-                    <td class="p-3 text-right font-semibold ${row.pct < 0 ? 'text-rose-600' : 'text-slate-800'}">${(row.pct || 0).toFixed(2)}%</td>
-                    <td class="p-3 text-center">
-                        <span class="px-2 py-0.5 text-xs rounded-full font-semibold ${getBadgeClass(row.status)}">${row.status}</span>
-                    </td>
-                    <td class="p-3 text-slate-500 max-w-xs truncate">${row.remarks}</td>
-                </tr>
-            `).join('');
-
-            renderDashboardCharts();
-        }
-
-        // Render Dashboard Bar & Doughnut Charts
-        function renderDashboardCharts() {
-            // Comparison Bar Chart
-            const ctx1 = document.getElementById('comparisonChart').getContext('2d');
-            if (chartInstances.comparison) chartInstances.comparison.destroy();
-
-            const labels = appData.dashboard.map(d => d.metric);
-            const tallyData = appData.dashboard.map(d => d.tally);
-            const erpData = appData.dashboard.map(d => d.erp);
-
-            chartInstances.comparison = new Chart(ctx1, {
-                type: 'bar',
-                data: {
-                    labels: labels,
-                    datasets: [
-                        { label: 'Tally Total', data: tallyData, backgroundColor: '#0284c7', borderRadius: 6 },
-                        { label: 'ERP Total', data: erpData, backgroundColor: '#10b981', borderRadius: 6 }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { position: 'top' } },
-                    scales: { y: { beginAtZero: true, grid: { color: '#f1f5f9' } }, x: { grid: { display: false } } }
-                }
-            });
-
-            // Status Doughnut Chart
-            const ctx2 = document.getElementById('statusDoughnutChart').getContext('2d');
-            if (chartInstances.status) chartInstances.status.destroy();
-
-            const statusCounts = appData.dailyEntries.reduce((acc, row) => {
-                const s = row.overallStatus || 'Match';
-                acc[s] = (acc[s] || 0) + 1;
-                return acc;
-            }, {});
-
-            chartInstances.status = new Chart(ctx2, {
-                type: 'doughnut',
-                data: {
-                    labels: Object.keys(statusCounts),
-                    datasets: [{
-                        data: Object.values(statusCounts),
-                        backgroundColor: ['#22c55e', '#ef4444', '#f59e0b', '#94a3b8'],
-                        borderWidth: 2,
-                        borderColor: '#ffffff'
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { position: 'bottom' } },
-                    cutout: '70%'
-                }
-            });
-        }
-
-        // Populate Month Filters
-        function populateMonthFilters() {
-            const months = [...new Set(appData.dailyEntries.map(e => e.month).filter(Boolean))];
-            
-            const dailySelect = document.getElementById('daily-month-filter');
-            dailySelect.innerHTML = '<option value="ALL">All Months</option>' + 
-                months.map(m => `<option value="${m}">${m}</option>`).join('');
-
-            const monthlySelect = document.getElementById('monthly-select');
-            monthlySelect.innerHTML = months.map(m => `<option value="${m}">${m}</option>`).join('');
-            if (months.length === 0) {
-                monthlySelect.innerHTML = '<option value="ALL">All Months Summary</option>';
-            }
-        }
-
-        // Render Tab 2: Daily Entry Register
-        function renderDailyTab() {
-            applyDailyFilters();
-        }
-
-        // Apply Filters for Daily Table
-        function applyDailyFilters() {
-            const search = document.getElementById('daily-search').value.toLowerCase();
-            const statusFilter = document.getElementById('daily-status-filter').value;
-            const monthFilter = document.getElementById('daily-month-filter').value;
-
-            const filtered = appData.dailyEntries.filter(row => {
-                const matchesSearch = String(row.date).toLowerCase().includes(search) || 
-                                      String(row.remarks).toLowerCase().includes(search);
-                const matchesStatus = statusFilter === 'ALL' || (row.overallStatus && row.overallStatus.toLowerCase() === statusFilter.toLowerCase());
-                const matchesMonth = monthFilter === 'ALL' || row.month === monthFilter;
-
-                return matchesSearch && matchesStatus && matchesMonth;
-            });
-
-            document.getElementById('daily-count').textContent = filtered.length;
-
-            const tbody = document.getElementById('daily-table-body');
-            tbody.innerHTML = filtered.map(row => `
-                <tr class="hover:bg-slate-50 transition border-b border-slate-100">
-                    <td class="p-3 font-semibold text-slate-900 sticky left-0 bg-white">${row.date}</td>
-                    <td class="p-3 text-right">${formatCurrency(row.tallySales)}</td>
-                    <td class="p-3 text-right">${formatCurrency(row.erpSales)}</td>
-                    <td class="p-3 text-right font-semibold ${row.salesVar < 0 ? 'text-rose-600' : 'text-slate-700'}">${formatCurrency(row.salesVar)}</td>
-                    <td class="p-3 text-center"><span class="px-2 py-0.5 text-[10px] font-semibold rounded-full ${getBadgeClass(row.salesStatus)}">${row.salesStatus}</span></td>
-                    <td class="p-3 text-right">${formatNum(row.tallyCases)}</td>
-                    <td class="p-3 text-right">${formatNum(row.erpCases)}</td>
-                    <td class="p-3 text-right font-semibold ${row.casesVar < 0 ? 'text-rose-600' : 'text-slate-700'}">${formatNum(row.casesVar)}</td>
-                    <td class="p-3 text-center"><span class="px-2 py-0.5 text-[10px] font-semibold rounded-full ${getBadgeClass(row.casesStatus)}">${row.casesStatus}</span></td>
-                    <td class="p-3 text-right">${formatNum(row.tallyStock)}</td>
-                    <td class="p-3 text-right">${formatNum(row.erpStock)}</td>
-                    <td class="p-3 text-right font-semibold ${row.stockVar < 0 ? 'text-rose-600' : 'text-slate-700'}">${formatNum(row.stockVar)}</td>
-                    <td class="p-3 text-center"><span class="px-2 py-0.5 text-[10px] font-semibold rounded-full ${getBadgeClass(row.stockStatus)}">${row.stockStatus}</span></td>
-                    <td class="p-3 text-center"><span class="px-2 py-0.5 text-[10px] font-semibold rounded-full ${getBadgeClass(row.overallStatus)}">${row.overallStatus}</span></td>
-                    <td class="p-3 text-slate-500 truncate max-w-[180px]" title="${row.remarks}">${row.remarks}</td>
-                </tr>
-            `).join('');
-        }
-
-        // Render Tab 3: Monthly View
-        function renderMonthlyView() {
-            const summary = appData.monthlySummary;
-            const tbody = document.getElementById('monthly-table-body');
-
-            tbody.innerHTML = summary.map(row => `
-                <tr class="hover:bg-slate-50 transition">
-                    <td class="p-3 font-semibold text-slate-800">${row.metric}</td>
-                    <td class="p-3 text-right text-slate-700">${formatNum(row.tally)}</td>
-                    <td class="p-3 text-right text-slate-700">${formatNum(row.erp)}</td>
-                    <td class="p-3 text-right font-semibold ${row.variance < 0 ? 'text-rose-600' : 'text-slate-800'}">${formatNum(row.variance)}</td>
-                    <td class="p-3 text-right font-semibold ${row.pct < 0 ? 'text-rose-600' : 'text-slate-800'}">${(row.pct || 0).toFixed(2)}%</td>
-                    <td class="p-3 text-center">
-                        <span class="px-2.5 py-0.5 text-xs rounded-full font-semibold ${getBadgeClass(row.status)}">${row.status}</span>
-                    </td>
-                    <td class="p-3 text-center text-slate-600">${row.entries || '-'}</td>
-                    <td class="p-3 text-slate-500">${row.note}</td>
-                </tr>
-            `).join('');
-
-            renderMonthlyChart();
-        }
-
-        // Render Monthly Trend / Variance Chart
-        function renderMonthlyChart() {
-            const ctx = document.getElementById('monthlyChart').getContext('2d');
-            if (chartInstances.monthly) chartInstances.monthly.destroy();
-
-            const labels = appData.monthlySummary.map(m => m.metric);
-            const variances = appData.monthlySummary.map(m => m.variance);
-
-            chartInstances.monthly = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: 'Variance Value',
-                        data: variances,
-                        backgroundColor: variances.map(v => v < 0 ? '#ef4444' : '#22c55e'),
-                        borderRadius: 6
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
-                    scales: {
-                        y: { grid: { color: '#f1f5f9' } },
-                        x: { grid: { display: false } }
-                    }
-                }
-            });
-        }
-    </script>
+        });
+    }
+</script>
 </body>
 </html>
